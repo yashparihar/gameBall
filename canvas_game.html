@@ -1,0 +1,238 @@
+<html>
+
+<head>
+	<title> game </title>
+	<script src="jquery/jquery-3.2.1.min.js">
+	</script>
+	
+	<script>
+	
+	var canvas;
+	var canvasContext;
+	var framePerSecond = 30;
+	
+	
+	var ballSpeedX = 15;
+	var ballSpeedY = 4;
+	
+	const PADDLE_HEIGHT = 	100;
+	var paddle1Y = 250;
+	
+	var ballX=15;
+	var ballY= paddle1Y + PADDLE_HEIGHT/2;
+	
+	var blockDestroy=0 ; //used at every interval to track if block is strked or not , 0 means not stroked and 1 means strok and movement is reflected
+	var BLOCK_W = 15;
+	var BLOCK_H = 70;
+	var BLOCK_SPACE = 5;
+	var TOT_BLOCK_COL = 6;
+	var BLOCK_START_POS = 800 - (TOT_BLOCK_COL * (BLOCK_W + BLOCK_SPACE) );
+	var TOT_BLOCK_W = 800 - BLOCK_START_POS;
+	
+	var blockHold=new Array(TOT_BLOCK_COL)
+        for (i=0; i <TOT_BLOCK_COL; i++)
+           blockHold[i]=new Array()
+		  
+    for (i=0; i <TOT_BLOCK_COL; i++)
+             for (j=0; j <8; j++)	 
+		              blockHold[i][j] = 1; //MEANS ALIVE
+	   //WHEN BLOCK STROCKED BY BALL IS SET TO 2 MEANS DEAD AND NOT DISPLAY
+	
+	var totBlock = TOT_BLOCK_COL * 600/(BLOCK_H + BLOCK_SPACE) //TOTAL BLOCK ARRANGED
+	
+	
+	
+	
+//WHEN PAGE IS LOADED AT FULLY......................	
+	$(document).ready(function(){
+		
+        	canvas = document.getElementById('gameCanvas');
+			canvasContext = canvas.getContext('2d');
+		    
+
+			 drawEverything();  //getting ready all props in static mode
+			 
+			 canvasContext.font = "40px Comic Sans MS";
+			 canvasContext.fillStyle = "white";
+             canvasContext.fillText("CLICK TO START",800/4,600/2);
+
+			 
+			 //STARTING THE GAME......
+			  $("#gameCanvas").click(function(event){
+			
+			       // INTERVAL OF TIME FRAME IN WHICH EVERY THING IS REFRESHED WHILE MAINTAINIG SMALL POS AND PRESENT BLOCK
+					setInterval(function(){
+				
+						if (totBlock<=0){  //IF ALL BLOCK SMASHED , RELOAD
+							alert("CONGRATES")
+							location.reload();
+						}
+					 
+						//refresh ball movement and remaining blocks
+						moveEverything();
+						drawEverything();
+				
+					} , 1000/framePerSecond );	
+		      
+			     
+				    //FOR PADDLE WHEN MOUSE IS MOVED IN Y DIRECTION
+					$("#gameCanvas").mousemove(function(event){                   
+							paddle1Y = event.pageY - PADDLE_HEIGHT/2;                 
+					}); 
+
+
+			});
+			
+	
+	});
+	
+	//WHEN BALL STRIKES BLOCK
+	function checkBlockSmash(){
+	
+	   // IF BALLS IS IN THE BLOCK AREA
+	   if (ballX >= BLOCK_START_POS){
+
+	     
+		   var totBW = BLOCK_W+BLOCK_SPACE;
+		   var totBH = BLOCK_H + BLOCK_SPACE;
+		 
+           //CALCULATING BLOCK COL AND ROWS FOR BLOCKHOLD TO RECOGNIZE WHICH BLOCK IS TO BE SMASHED 
+    	   var ballCol = Math.floor( (TOT_BLOCK_W - (800 - ballX) + 1) / totBW );
+		   var ballRow = Math.floor( ballY / totBH );
+		
+		
+		//   console.log("ballcol="+ballCol+" ballRow="+ballRow);
+		 
+		   // IF PERTICULAR BLOCK IS 1 THAT MEANS ITS PRESENT AND TAKE NECESAARY STEP TO REMOVE IT
+			if (blockHold[ballCol][ballRow] == 1){
+				colorRect(700+(ballCol*BLOCK_W) , ballRow*BLOCK_H , BLOCK_W , BLOCK_H , 'black' ); //OVERLAP THAT BLOCK WITH BLACK COLOR
+				
+				blockHold[ballCol][ballRow] = 2;     // INDICATE THAT ITS NOT PRESENT AND WILL NOT BE DISPLAYED
+				blockDestroy = 1;                   // FLAG - A BLOCK DESTROYED
+			   totBlock--;
+		   }
+          else{
+		         blockDestroy = 0 ;                 // FLAG - a BLOCK IS ALREADY DESTROYED , CAN GO FORWARD
+		  }
+	   
+	   }
+	
+	}
+
+
+
+
+	// DRAWING BLOCKS	
+	function drawBlocks(width, height){
+	   var blockYPos=1;
+	   
+	   var x =width- (BLOCK_W + BLOCK_SPACE) * TOT_BLOCK_COL;   // X is col POS FROM WHICH BLOCK IS TO BE ALLOCATED
+	        
+        
+		//CHECK IF BALL IS SMASHING ONE OF THE BLOCK
+		checkBlockSmash();	 
+	 
+	 // DRAW BLOCKS WHICH ARE NOT SMASHED
+		for(count = 0 ; count < TOT_BLOCK_COL ; count++){		       
+				blockYPos=1;
+				while(blockYPos < height){
+				      var y =Math.floor( blockYPos/(BLOCK_H+BLOCK_SPACE) );   // Y is row POS FROM WHICH BLOCK IS TO BE ALLOCATED in x col
+	                
+  					 if (blockHold[count][y]==1) 
+							colorRect(x,blockYPos, BLOCK_W , BLOCK_H ,'green' );
+						
+						blockYPos = blockYPos + BLOCK_H + BLOCK_SPACE;		
+            	  }
+	  
+	           x = x + BLOCK_W + BLOCK_SPACE;
+	    }
+	 
+	}
+	
+	
+	
+	
+	// MOVING BALL	
+	function moveEverything(){
+	
+	    // IF BALL REACHED EITHER CORNER , MOVE IT IN OPP DIRECTION 
+	    if (ballX>=canvas.width || ballX<=0 || blockDestroy==1 ){
+		    ballSpeedX = -ballSpeedX;
+		 }
+	    if (ballY>=canvas.height || ballY<=0   ){
+		    ballSpeedY = -ballSpeedY;
+		 }
+		
+		
+        if (ballX<=0){  //WHEN THE BALL IS IN PADDLE CORNER , TO CHECK IF IN PADDLE IN ITS RANGE OR NOT ELSE RESET GAME...
+		   
+		   if (ballY <= paddle1Y + PADDLE_HEIGHT && ballY >= paddle1Y ){
+		      	 ballX = ballX + ballSpeedX;
+		         ballY = ballY + ballSpeedY;
+		   }
+		   else{
+		   
+		        // alert("OPPS , BETTER LUCK NEXT TIME!")
+			  
+			   location.reload();
+		   }
+		}
+       else{
+				 ballX = ballX + ballSpeedX;
+		         ballY = ballY + ballSpeedY;
+	    }
+     }
+	
+	
+	// CREATING ALL PROPS ELEMENT IN CANVAS	
+	function drawEverything(){
+	//	console.log("in ballx="+ballX);
+	
+	   //This is for black space
+        	colorRect(0,0,canvas.width,canvas.height,'black' );
+			
+	  // this is for paddle		
+			colorRect(0, paddle1Y, 10, PADDLE_HEIGHT, 'white' );
+			
+		
+		// This is for the block	
+			drawBlocks(canvas.width , canvas.height);
+			
+		//this is for the ball		
+			colorCircle(ballX , ballY , 10);
+	  
+	}
+	
+	
+	//DRAWING CIRCLE
+	function colorCircle(x , y , radius){
+	
+	    canvasContext.fillStyle='red';
+			canvasContext.beginPath();
+			canvasContext.arc(x , y , radius ,0 , Math.PI*2);
+			canvasContext.fill();
+		
+	
+	}
+	
+	//DRAWING RECT SHAPW
+	function colorRect(x , y ,width,height , color){
+	       canvasContext.fillStyle = color;
+			canvasContext.fillRect(x,y,width,height );		
+	
+	}
+	
+	
+	
+	</script>
+	
+</head>
+	
+<body>
+      <canvas id="gameCanvas" width="800" height="600"> </canvas>
+
+	
+
+</body>
+
+</html>
